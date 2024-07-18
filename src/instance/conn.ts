@@ -1,16 +1,13 @@
 import { Sequelize } from 'sequelize';
 
-const sequelize = new Sequelize({
-  dialect: 'postgres',
-  database: 'sys_emails_env',
-  username: 'postgres',
-  password: '123Mudar',
-  host: 'localhost',
-  port: 5433, // Porta padrão do PostgreSQL
-  define: {
-    timestamps: false, // Evita que o Sequelize adicione colunas de timestamp automaticamente
-  },
-  logging: false
-});
+const sequelize = new Sequelize(    
+  process.env.PG_DB as string,
+  process.env.PG_USER as string,
+  process.env.PG_PASSWORD as string, {
+      dialect: 'postgres',
+      host: process.env.PG_HOST as string,
+      port: parseInt( process.env.PG_PORT as string ),
+      logging: false
+  });
 
 export default sequelize;
