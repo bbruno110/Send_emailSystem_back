@@ -12,6 +12,7 @@ interface EmpresaAttributes {
   nr_repeticao: number;
   ie_situacao: string;
   dt_atualizacao: Date;
+  dt_vencimento: Date; // Adicionando o campo dt_vencimento
 }
 
 interface EmpresaCreationAttributes extends Optional<EmpresaAttributes, 'id'> {}
@@ -27,6 +28,7 @@ class Empresa extends Model<EmpresaAttributes, EmpresaCreationAttributes> implem
   public nr_repeticao!: number;
   public ie_situacao!: string;
   public dt_atualizacao!: Date;
+  public dt_vencimento!: Date; // Adicionando o campo dt_vencimento
 
   // Timestamps automáticos (createdAt e updatedAt) são desabilitados
   public readonly createdAt!: Date;
@@ -83,6 +85,10 @@ Empresa.init(
       type: DataTypes.DATE,
       allowNull: false,
       defaultValue: DataTypes.NOW,
+    },
+    dt_vencimento: {
+      type: DataTypes.DATE,
+      allowNull: false,
     },
   },
   {

@@ -1,26 +1,29 @@
-import { DataTypes, Model } from 'sequelize';
+// src/models/envioEmail.ts
+
+import { DataTypes, Model, Optional } from 'sequelize';
 import sequelize from '../instance/conn';
 import Empresa from './empresa';
 import Perfil from './perfil';
 
 interface EnvioEmailAttributes {
   id: number;
-  empresas: number[];
-  perfilId?: number;
+  empresa_id?: number;
+  perfil_id?: number;
   ds_assunto: string;
   ds_conteudo: string;
   dt_envio: Date;
 }
 
-class EnvioEmail extends Model<EnvioEmailAttributes> implements EnvioEmailAttributes {
+export interface EnvioEmailCreationAttributes extends Optional<EnvioEmailAttributes, 'id'> {}
+
+class EnvioEmail extends Model<EnvioEmailAttributes, EnvioEmailCreationAttributes> implements EnvioEmailAttributes {
   public id!: number;
-  public empresas!: number[];
-  public perfilId?: number;
+  public empresa_id?: number;
+  public perfil_id?: number;
   public ds_assunto!: string;
   public ds_conteudo!: string;
   public dt_envio!: Date;
 
-  // Timestamps automáticos (createdAt e updatedAt) são desabilitados
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -32,25 +35,31 @@ EnvioEmail.init(
       autoIncrement: true,
       primaryKey: true,
     },
-    empresas: {
-      type: DataTypes.ARRAY(DataTypes.INTEGER), // Array de números inteiros para IDs das empresas
-      allowNull: false,
-    },
-    perfilId: {
+    empresa_id: {
       type: DataTypes.INTEGER,
       references: {
-        model: 'Perfil', // Nome da tabela de perfil no banco de dados
+        model: 'empresa',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
+      onUpdate: 'CASCADE',
+    },
+    perfil_id: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: 'perfil',
         key: 'id',
       },
       onDelete: 'SET NULL',
       onUpdate: 'CASCADE',
+      allowNull: true,
     },
     ds_assunto: {
       type: DataTypes.STRING,
       allowNull: false,
     },
     ds_conteudo: {
-      type: DataTypes.TEXT, // Tipo TEXT para conteúdo extenso
+      type: DataTypes.TEXT,
       allowNull: false,
     },
     dt_envio: {
@@ -61,20 +70,18 @@ EnvioEmail.init(
   },
   {
     sequelize,
-    modelName: 'EnvioEmail', // Nome do modelo
-    tableName: 'envio_email', // Nome da tabela no banco de dados
+    modelName: 'EnvioEmail',
+    tableName: 'envio_email',
     schema: 'prod_email',
-    timestamps: false, // Evita a criação automática de colunas createdAt e updatedAt
+    timestamps: false,
   }
 );
 
-// Associações com outros modelos (opcional)
-EnvioEmail.belongsToMany(Empresa, {
-  through: 'EnvioEmailEmpresa',
-  foreignKey: 'envioEmailId',
+EnvioEmail.belongsTo(Empresa, {
+  foreignKey: 'empresa_id',
 });
 EnvioEmail.belongsTo(Perfil, {
-  foreignKey: 'perfilId',
+  foreignKey: 'perfil_id',
   as: 'perfil',
 });
 

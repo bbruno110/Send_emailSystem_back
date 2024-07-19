@@ -7,7 +7,7 @@ const sequelize = new Sequelize(
       dialect: 'postgres',
       host: process.env.PG_HOST as string,
       port: parseInt( process.env.PG_PORT as string ),
-      logging: false
+      //logging: false
   });
 
 export default sequelize;

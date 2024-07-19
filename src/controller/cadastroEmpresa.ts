@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import Empresa from '../models/empresa';
+import { Op } from 'sequelize';
 
 function tratarDadosEmpresa(dados: any): any {
     if (!dados.nome || !dados.cnpj || !dados.tel1 || !dados.email) {
@@ -102,3 +103,28 @@ export const editEmpresa = async (req: Request, res: Response) => {
     }
   };
   
+  export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Response) => {
+    try {
+      const dataAtual = new Date();
+      const primeiroDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), 1);
+      const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
+  
+      // Busca todas as empresas com dt_vencimento dentro do mês atual
+      const empresas = await Empresa.findAll({
+        where: {
+          dt_vencimento: {
+            [Op.between]: [primeiroDiaMes, ultimoDiaMes]
+          },
+          ie_situacao: 'A' // Filtra apenas as empresas ativas
+        },
+        attributes: ['id', 'ds_nome', 'cd_cnpj', 'nr_telefone_1', 'nr_telefone_2', 'ds_email', 'nr_repeticao', 'ie_situacao', 'dt_vencimento'],
+        order: [['ds_nome', 'ASC']]
+      });
+  
+      // Retorna a lista de empresas como resposta
+      return res.status(200).json(empresas);
+    } catch (error) {
+      console.error('Erro ao listar empresas com vencimento no mês atual:', error);
+      return res.status(500).json({ error: 'Erro interno ao listar empresas com vencimento no mês atual' });
+    }
+  };
