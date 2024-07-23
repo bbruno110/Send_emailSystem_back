@@ -12,8 +12,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.listEmpresas = exports.editEmpresa = exports.cadastrarEmpresa = void 0;
+exports.listarEmpresasVencimentoMesAtual = exports.listEmpresas = exports.editEmpresa = exports.cadastrarEmpresa = void 0;
 const empresa_1 = __importDefault(require("../models/empresa"));
+const sequelize_1 = require("sequelize");
 function tratarDadosEmpresa(dados) {
     if (!dados.nome || !dados.cnpj || !dados.tel1 || !dados.email) {
         throw new Error('Dados incompletos para cadastrar empresa');
@@ -22,6 +23,9 @@ function tratarDadosEmpresa(dados) {
     const tel1 = dados.tel1.replace(/[^\d]/g, '');
     const tel2 = dados.tel2 ? dados.tel2.replace(/[^\d]/g, '') : '';
     const situacao = dados.situacao || 'A';
+    const valor = dados.nr_valor ? parseFloat(dados.nr_valor) : null; // Processa nr_valor
+    const processo = dados.dt_processo ? new Date(dados.dt_processo) : null; // Processa dt_processo
+    const vencimento = dados.dt_vencimento ? new Date(dados.dt_vencimento) : null; // Processa dt_vencimento
     return {
         ds_nome: dados.nome,
         cd_cnpj: cnpj,
@@ -31,7 +35,10 @@ function tratarDadosEmpresa(dados) {
         nr_repeticao: dados.repeticao || 0,
         ie_situacao: situacao,
         dt_criacao: new Date(),
-        dt_atualizacao: new Date()
+        dt_atualizacao: new Date(),
+        nr_valor: valor,
+        dt_processo: processo,
+        dt_vencimento: vencimento, // Novo campo
     };
 }
 const cadastrarEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
@@ -41,34 +48,26 @@ const cadastrarEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, functio
             where: { cd_cnpj: dadosTratados.cd_cnpj }
         });
         if (empresaExistente) {
-            setTimeout(() => {
-                res.status(400).json({ erro: 'CNPJ já cadastrado' });
-            }, 5000);
+            res.status(400).json({ erro: 'CNPJ já cadastrado' });
             return;
         }
         const novaEmpresa = yield empresa_1.default.create(dadosTratados);
-        setTimeout(() => {
-            res.status(200).json(novaEmpresa);
-        }, 5000);
+        res.status(200).json(novaEmpresa);
     }
     catch (error) {
         console.error('Erro ao cadastrar empresa:', error);
-        setTimeout(() => {
-            res.status(500).json({ erro: 'Erro ao cadastrar empresa' });
-        }, 5000);
+        res.status(500).json({ erro: 'Erro ao cadastrar empresa' });
     }
 });
 exports.cadastrarEmpresa = cadastrarEmpresa;
 const editEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { id } = req.params; // Obtém o ID da empresa a ser editada
-    const { ds_nome, cd_cnpj, nr_telefone_1, nr_telefone_2, ds_email, nr_repeticao, ie_situacao } = req.body; // Obtém os dados atualizados da empresa, incluindo situacao
+    const { id } = req.params;
+    const { ds_nome, cd_cnpj, nr_telefone_1, nr_telefone_2, ds_email, nr_repeticao, ie_situacao, nr_valor, dt_processo } = req.body;
     try {
-        // Busca a empresa pelo ID no banco de dados
         const empresa = yield empresa_1.default.findByPk(id);
         if (!empresa) {
             return res.status(404).json({ error: 'Empresa não encontrada' });
         }
-        // Atualiza os campos da empresa com os novos dados, incluindo situacao
         empresa.ds_nome = ds_nome;
         empresa.cd_cnpj = cd_cnpj;
         empresa.nr_telefone_1 = nr_telefone_1;
@@ -76,11 +75,9 @@ const editEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         empresa.ds_email = ds_email;
         empresa.nr_repeticao = nr_repeticao;
         empresa.ie_situacao = ie_situacao;
-        // Simula um atraso de 3 segundos antes de salvar
-        yield new Promise(resolve => setTimeout(resolve, 3000));
-        // Salva as alterações no banco de dados
+        empresa.nr_valor = nr_valor; // Atualiza nr_valor
+        empresa.dt_processo = dt_processo; // Atualiza dt_processo
         yield empresa.save();
-        // Retorna a empresa atualizada como resposta
         return res.status(200).json(empresa);
     }
     catch (error) {
@@ -105,3 +102,28 @@ const listEmpresas = (req, res) => __awaiter(void 0, void 0, void 0, function* (
     }
 });
 exports.listEmpresas = listEmpresas;
+const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const dataAtual = new Date();
+        const primeiroDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), 1);
+        const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
+        // Busca todas as empresas com dt_vencimento dentro do mês atual
+        const empresas = yield empresa_1.default.findAll({
+            where: {
+                dt_vencimento: {
+                    [sequelize_1.Op.between]: [primeiroDiaMes, ultimoDiaMes]
+                },
+                ie_situacao: 'A' // Filtra apenas as empresas ativas
+            },
+            attributes: ['id', 'ds_nome', 'cd_cnpj', 'nr_telefone_1', 'nr_telefone_2', 'ds_email', 'nr_repeticao', 'ie_situacao', 'dt_vencimento', 'dt_processo', 'nr_valor'],
+            order: [['ds_nome', 'ASC']]
+        });
+        // Retorna a lista de empresas como resposta
+        return res.status(200).json(empresas);
+    }
+    catch (error) {
+        console.error('Erro ao listar empresas com vencimento no mês atual:', error);
+        return res.status(500).json({ error: 'Erro interno ao listar empresas com vencimento no mês atual' });
+    }
+});
+exports.listarEmpresasVencimentoMesAtual = listarEmpresasVencimentoMesAtual;

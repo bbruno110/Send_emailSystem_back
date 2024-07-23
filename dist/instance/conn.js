@@ -1,16 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const sequelize_1 = require("sequelize");
-const sequelize = new sequelize_1.Sequelize({
+const sequelize = new sequelize_1.Sequelize(process.env.PG_DB, process.env.PG_USER, process.env.PG_PASSWORD, {
     dialect: 'postgres',
-    database: 'sys_emails_env',
-    username: 'postgres',
-    password: '123Mudar',
-    host: 'localhost',
-    port: 5433,
-    define: {
-        timestamps: false, // Evita que o Sequelize adicione colunas de timestamp automaticamente
-    },
-    logging: false
+    host: process.env.PG_HOST,
+    port: parseInt(process.env.PG_PORT),
+    logging: true
 });
 exports.default = sequelize;

@@ -9,53 +9,60 @@ class Empresa extends sequelize_1.Model {
 }
 Empresa.init({
     id: {
-        type: sequelize_1.DataTypes.INTEGER,
+        type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
         autoIncrement: true,
         primaryKey: true,
     },
     ds_nome: {
-        type: sequelize_1.DataTypes.STRING,
+        type: new sequelize_1.DataTypes.STRING(255),
         allowNull: false,
     },
     cd_cnpj: {
-        type: sequelize_1.DataTypes.STRING(14),
+        type: new sequelize_1.DataTypes.STRING(18),
         allowNull: false,
-        unique: true, // Garantir unicidade do CNPJ
     },
     nr_telefone_1: {
-        type: sequelize_1.DataTypes.STRING(11),
-        allowNull: false,
+        type: new sequelize_1.DataTypes.STRING(20),
+        allowNull: true,
     },
     nr_telefone_2: {
-        type: sequelize_1.DataTypes.STRING(11),
-        allowNull: true, // Torna o segundo telefone opcional
+        type: new sequelize_1.DataTypes.STRING(20),
+        allowNull: true,
     },
     ds_email: {
-        type: sequelize_1.DataTypes.STRING,
-        allowNull: false,
-        validate: {
-            isEmail: true, // Validação de e-mail
-        },
+        type: new sequelize_1.DataTypes.STRING(255),
+        allowNull: true,
     },
     dt_criacao: {
         type: sequelize_1.DataTypes.DATE,
-        allowNull: false,
+        allowNull: true,
         defaultValue: sequelize_1.DataTypes.NOW,
     },
     nr_repeticao: {
-        type: sequelize_1.DataTypes.INTEGER,
-        allowNull: false,
-        defaultValue: 0,
+        type: sequelize_1.DataTypes.INTEGER.UNSIGNED,
+        allowNull: true,
     },
     ie_situacao: {
-        type: sequelize_1.DataTypes.STRING(1),
-        allowNull: false,
-        defaultValue: 'A', // Valor padrão para 'ie_situacao'
+        type: sequelize_1.DataTypes.CHAR(1),
+        allowNull: true,
+        defaultValue: 'A',
     },
     dt_atualizacao: {
         type: sequelize_1.DataTypes.DATE,
-        allowNull: false,
+        allowNull: true,
         defaultValue: sequelize_1.DataTypes.NOW,
+    },
+    dt_vencimento: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: true,
+    },
+    dt_processo: {
+        type: sequelize_1.DataTypes.DATE,
+        allowNull: true,
+    },
+    nr_valor: {
+        type: sequelize_1.DataTypes.DECIMAL(10, 2),
+        allowNull: true,
     },
 }, {
     sequelize: conn_1.default,

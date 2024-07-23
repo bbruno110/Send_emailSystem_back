@@ -5,98 +5,107 @@ interface EmpresaAttributes {
   id: number;
   ds_nome: string;
   cd_cnpj: string;
-  nr_telefone_1: string;
-  nr_telefone_2: string;
-  ds_email: string;
-  dt_criacao: Date;
-  nr_repeticao: number;
-  ie_situacao: string;
-  dt_atualizacao: Date;
-  dt_vencimento: Date; // Adicionando o campo dt_vencimento
+  nr_telefone_1?: string;
+  nr_telefone_2?: string;
+  ds_email?: string;
+  dt_criacao?: Date;
+  nr_repeticao?: number;
+  ie_situacao?: string;
+  dt_atualizacao?: Date;
+  dt_vencimento?: Date;
+  dt_processo?: Date;
+  nr_valor?: number;
+  ie_status?: string;
 }
 
 interface EmpresaCreationAttributes extends Optional<EmpresaAttributes, 'id'> {}
 
-class Empresa extends Model<EmpresaAttributes, EmpresaCreationAttributes> implements EmpresaAttributes {
+class Empresa extends Model<EmpresaAttributes, EmpresaCreationAttributes>
+  implements EmpresaAttributes {
   public id!: number;
   public ds_nome!: string;
   public cd_cnpj!: string;
-  public nr_telefone_1!: string;
-  public nr_telefone_2!: string;
-  public ds_email!: string;
-  public dt_criacao!: Date;
-  public nr_repeticao!: number;
-  public ie_situacao!: string;
-  public dt_atualizacao!: Date;
-  public dt_vencimento!: Date; // Adicionando o campo dt_vencimento
-
-  // Timestamps automáticos (createdAt e updatedAt) são desabilitados
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+  public nr_telefone_1?: string;
+  public nr_telefone_2?: string;
+  public ds_email?: string;
+  public dt_criacao?: Date;
+  public nr_repeticao?: number;
+  public ie_situacao?: string;
+  public dt_atualizacao?: Date;
+  public dt_vencimento?: Date;
+  public dt_processo?: Date;
+  public nr_valor?: number;
+  public ie_status?: string;
 }
 
 Empresa.init(
   {
     id: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.INTEGER.UNSIGNED,
       autoIncrement: true,
       primaryKey: true,
     },
     ds_nome: {
-      type: DataTypes.STRING,
+      type: new DataTypes.STRING(255),
       allowNull: false,
     },
     cd_cnpj: {
-      type: DataTypes.STRING(14), // Ajuste o tamanho conforme necessário
+      type: new DataTypes.STRING(18),
       allowNull: false,
-      unique: true, // Garantir unicidade do CNPJ
     },
     nr_telefone_1: {
-      type: DataTypes.STRING(11), // Ajuste o tamanho conforme necessário
-      allowNull: false,
+      type: new DataTypes.STRING(20),
+      allowNull: true,
     },
     nr_telefone_2: {
-      type: DataTypes.STRING(11), // Ajuste o tamanho conforme necessário
-      allowNull: true, // Torna o segundo telefone opcional
+      type: new DataTypes.STRING(20),
+      allowNull: true,
     },
     ds_email: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      validate: {
-        isEmail: true, // Validação de e-mail
-      },
+      type: new DataTypes.STRING(255),
+      allowNull: true,
     },
     dt_criacao: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
       defaultValue: DataTypes.NOW,
     },
     nr_repeticao: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0,
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: true,
     },
     ie_situacao: {
-      type: DataTypes.STRING(1), // Ajuste o tamanho conforme necessário
-      allowNull: false,
-      defaultValue: 'A', // Valor padrão para 'ie_situacao'
+      type: DataTypes.CHAR(1),
+      allowNull: true,
+      defaultValue: 'A',
     },
     dt_atualizacao: {
       type: DataTypes.DATE,
-      allowNull: false,
+      allowNull: true,
       defaultValue: DataTypes.NOW,
     },
     dt_vencimento: {
       type: DataTypes.DATE,
+      allowNull: true,
+    },
+    dt_processo: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    nr_valor: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: true,
+    },
+    ie_status: {
+      type: new DataTypes.STRING(255),
       allowNull: false,
     },
   },
   {
-    sequelize,
-    modelName: 'Empresa', // Nome do modelo
-    tableName: 'empresa', // Nome da tabela no banco de dados
+    tableName: 'empresa',
+    modelName: 'EnvioEmail',
     schema: 'prod_email',
-    timestamps: false, // Evita a criação automática de colunas createdAt e updatedAt
+    sequelize,
   }
 );
 

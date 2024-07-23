@@ -1,4 +1,5 @@
 "use strict";
+// src/models/envioEmail.ts
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -15,18 +16,24 @@ EnvioEmail.init({
         autoIncrement: true,
         primaryKey: true,
     },
-    empresas: {
-        type: sequelize_1.DataTypes.ARRAY(sequelize_1.DataTypes.INTEGER),
-        allowNull: false,
-    },
-    perfilId: {
+    empresa_id: {
         type: sequelize_1.DataTypes.INTEGER,
         references: {
-            model: 'Perfil',
+            model: 'empresa',
+            key: 'id',
+        },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE',
+    },
+    perfil_id: {
+        type: sequelize_1.DataTypes.INTEGER,
+        references: {
+            model: 'perfil',
             key: 'id',
         },
         onDelete: 'SET NULL',
         onUpdate: 'CASCADE',
+        allowNull: true,
     },
     ds_assunto: {
         type: sequelize_1.DataTypes.STRING,
@@ -46,15 +53,13 @@ EnvioEmail.init({
     modelName: 'EnvioEmail',
     tableName: 'envio_email',
     schema: 'prod_email',
-    timestamps: false, // Evita a criação automática de colunas createdAt e updatedAt
+    timestamps: false,
 });
-// Associações com outros modelos (opcional)
-EnvioEmail.belongsToMany(empresa_1.default, {
-    through: 'EnvioEmailEmpresa',
-    foreignKey: 'envioEmailId',
+EnvioEmail.belongsTo(empresa_1.default, {
+    foreignKey: 'empresa_id',
 });
 EnvioEmail.belongsTo(perfil_1.default, {
-    foreignKey: 'perfilId',
+    foreignKey: 'perfil_id',
     as: 'perfil',
 });
 exports.default = EnvioEmail;
