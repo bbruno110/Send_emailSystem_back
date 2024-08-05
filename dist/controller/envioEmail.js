@@ -38,14 +38,16 @@ const enviarEmail = (destinatarios, assunto, corpo, perfilId) => __awaiter(void 
         }
         // Substitui as macros no corpo do e-mail
         const substituirMacros = (texto, empresa) => {
+            var _a;
             const dataCriacao = empresa.dt_criacao ? new Date(empresa.dt_criacao) : new Date();
             return texto
                 .replace(/@nome@/g, empresa.ds_nome)
                 .replace(/@status@/g, empresa.ie_status || '')
                 .replace(/@cnpj@/g, empresa.cd_cnpj)
                 .replace(/@email@/g, empresa.ds_email || '')
-                .replace(/@cadastro@/g, dataCriacao.toLocaleDateString())
+                .replace(/@dtcadastro@/g, dataCriacao.toLocaleDateString())
                 .replace(/@tel1@/g, empresa.nr_telefone_1 || '')
+                .replace(/@processo@/g, ((_a = empresa.nr_processo) === null || _a === void 0 ? void 0 : _a.toString()) || '')
                 .replace(/@tel2@/g, empresa.nr_telefone_2 || '');
         };
         // Busca todas as empresas de uma vez

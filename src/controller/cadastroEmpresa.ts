@@ -120,7 +120,7 @@ export const listEmpresas = async (req: Request, res: Response) => {
 
 export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Response) => {
   const { pagina = 1, itensPorPagina = 10, statusVencimento, ie_status, start_date, end_date } = req.query;
-  
+
   // Adicionando console.log para ver os parâmetros recebidos
   console.log('Parâmetros recebidos:', {
     pagina,
@@ -157,9 +157,7 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
 
     // Considerar dt_processo entre start_date e end_date apenas se statusVencimento for undefined ou ''
     if (!statusVencimento || statusVencimento === '') {
-      whereClause= {
-        
-      };
+      delete whereClause.dt_vencimento;
     }
 
     if (ie_status && ie_status !== '') {
@@ -168,7 +166,10 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
 
     const limit = Math.max(1, Number(itensPorPagina) || 10);
     const paginaAtual = Math.max(1, Number(pagina) || 1);
-    const offset = (paginaAtual - 1) * limit;
+    let offset = (paginaAtual - 1) * limit;
+
+    // Garantir que o offset não seja negativo
+    offset = Math.max(0, offset);
 
     console.log(`Page: ${paginaAtual}, Items per Page: ${limit}, Offset: ${offset}`);
 

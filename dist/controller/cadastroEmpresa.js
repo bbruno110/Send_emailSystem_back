@@ -121,15 +121,21 @@ const listEmpresas = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 exports.listEmpresas = listEmpresas;
 const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { pagina = 1, itensPorPagina = 10, statusVencimento, ie_status, start_date, end_date } = req.query;
+    // Adicionando console.log para ver os parâmetros recebidos
+    console.log('Parâmetros recebidos:', {
+        pagina,
+        itensPorPagina,
+        statusVencimento,
+        ie_status,
+        start_date,
+        end_date
+    });
     try {
         const startDate = start_date ? new Date(start_date) : new Date();
         const endDate = end_date ? new Date(end_date) : new Date();
         const dataAtual = new Date();
         const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
         let whereClause = {
-            dt_processo: {
-                [sequelize_1.Op.between]: [startDate.toISOString(), endDate.toISOString()]
-            },
             ie_situacao: 'A'
         };
         if (statusVencimento === 'vencidas') {
@@ -147,11 +153,17 @@ const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0,
                 [sequelize_1.Op.gt]: dataAtual
             };
         }
-        if (ie_status) {
+        // Considerar dt_processo entre start_date e end_date apenas se statusVencimento for undefined ou ''
+        if (!statusVencimento || statusVencimento === '') {
+            whereClause = {};
+        }
+        if (ie_status && ie_status !== '') {
             whereClause.ie_status = ie_status;
         }
-        const limit = Number(itensPorPagina) || 10;
-        const offset = (Number(pagina) - 1) * limit;
+        const limit = Math.max(1, Number(itensPorPagina) || 10);
+        const paginaAtual = Math.max(1, Number(pagina) || 1);
+        const offset = (paginaAtual - 1) * limit;
+        console.log(`Page: ${paginaAtual}, Items per Page: ${limit}, Offset: ${offset}`);
         const { count, rows: empresas } = yield empresa_1.default.findAndCountAll({
             where: whereClause,
             attributes: [
@@ -178,12 +190,13 @@ const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0,
         return res.status(200).json({
             totalItems: count,
             totalPaginas: totalPaginas,
-            paginaAtual: Number(pagina),
+            paginaAtual: paginaAtual,
             itensPorPagina: limit,
             empresas: empresas
         });
     }
     catch (error) {
+        console.error('Erro interno ao listar empresas com vencimento no mês atual:', error);
         return res.status(500).json({ error: 'Erro interno ao listar empresas com vencimento no mês atual' });
     }
 });
