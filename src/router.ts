@@ -10,6 +10,7 @@ routes.get('/list', Empresa.listEmpresas);
 routes.put('/edit/:id', Empresa.editEmpresa);
 routes.get('/empresas/list', Empresa.listarEmpresasVencimentoMesAtual);
 routes.get('/empresas/intervalo-datas', Empresa.listarEmpresasPorIntervaloDatas);
+routes.put('/update-status', Empresa.updateStatus);
 
 routes.get('/list-perfil', Perfil.getAllPerfis)
 routes.post('/create-perfil', Perfil.createPerfil)

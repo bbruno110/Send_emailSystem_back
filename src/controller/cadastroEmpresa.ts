@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import Empresa from '../models/empresa';
 import { Op } from 'sequelize';
-import sequelize from '../instance/conn';
 
 // Função para adicionar meses a uma data
 const adicionarMeses = (data: Date, meses: number): Date => {
@@ -12,7 +11,7 @@ const adicionarMeses = (data: Date, meses: number): Date => {
 
 // Função para tratar os dados da empresa
 function tratarDadosEmpresa(dados: any): any {
-  if (!dados.nome || !dados.cnpj || !dados.tel1 || !dados.email) {
+  if (!dados.nome || !dados.cnpj || !dados.tel1 || !dados.email || !dados.nr_processo) {
     throw new Error('Dados incompletos para cadastrar empresa');
   }
 
@@ -23,6 +22,7 @@ function tratarDadosEmpresa(dados: any): any {
   const valor = dados.nr_valor ? parseFloat(dados.nr_valor) : null; // Processa nr_valor
   const processo = dados.dt_processo ? new Date(dados.dt_processo) : null; // Processa dt_processo
   const repeticao = dados.repeticao || 0; // Repetição, em meses
+  const nrProcesso = dados.nr_processo; // Novo campo
   const dataCriacao = new Date(); // Data de criação, pode ser o momento atual ou outra data fornecida
 
   // Calcula a dt_vencimento
@@ -42,6 +42,7 @@ function tratarDadosEmpresa(dados: any): any {
     dt_processo: processo, // Novo campo
     dt_vencimento: dtVencimento, // Novo campo calculado
     ie_status: 'Inicial', // Define o status inicial
+    nr_processo: nrProcesso, // Novo campo
   };
 }
 
@@ -69,7 +70,7 @@ export const cadastrarEmpresa = async (req: Request, res: Response) => {
 
 export const editEmpresa = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { ds_nome, cd_cnpj, nr_telefone_1, nr_telefone_2, ds_email, nr_repeticao, ie_situacao, nr_valor, dt_processo, ie_status } = req.body;
+  const { ds_nome, cd_cnpj, nr_telefone_1, nr_telefone_2, ds_email, nr_repeticao, ie_situacao, nr_valor, dt_processo, ie_status, nr_processo } = req.body;
 
   try {
     const empresa = await Empresa.findByPk(id);
@@ -85,9 +86,12 @@ export const editEmpresa = async (req: Request, res: Response) => {
     empresa.ds_email = ds_email;
     empresa.nr_repeticao = nr_repeticao;
     empresa.ie_situacao = ie_situacao;
-    empresa.nr_valor = nr_valor; // Atualiza nr_valor
-    empresa.dt_processo = dt_processo; // Atualiza dt_processo
-    empresa.ie_status = ie_status; // Atualiza ie_status
+    empresa.nr_valor = nr_valor;
+    empresa.dt_processo = dt_processo;
+    empresa.nr_processo = nr_processo;
+
+    // Verifica se ie_status foi enviado e é válido, caso contrário define um valor padrão
+    empresa.ie_status = ie_status || empresa.ie_status; // Usando o valor existente se ie_status não for fornecido
 
     await empresa.save();
 
@@ -102,7 +106,7 @@ export const listEmpresas = async (req: Request, res: Response) => {
   try {
     // Busca todas as empresas no banco de dados
     const empresas = await Empresa.findAll({
-      attributes: ['id', 'ds_nome', 'ds_email', 'cd_cnpj', 'nr_telefone_1', 'nr_telefone_2', 'nr_repeticao', 'ie_situacao', 'dt_processo', 'nr_valor'],
+      attributes: ['id', 'ds_nome', 'ds_email', 'cd_cnpj', 'nr_telefone_1', 'nr_telefone_2', 'nr_repeticao', 'ie_situacao', 'dt_processo', 'nr_valor', 'nr_processo'],
       order: [['ds_nome', 'ASC']]
     });
 
@@ -116,13 +120,16 @@ export const listEmpresas = async (req: Request, res: Response) => {
 
 export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Response) => {
   const { pagina = 1, itensPorPagina = 10, statusVencimento, ie_status, start_date, end_date } = req.query;
-
+  
   try {
-    // Verificar e ajustar as datas fornecidas
     const startDate = start_date ? new Date(start_date as string) : new Date();
     const endDate = end_date ? new Date(end_date as string) : new Date();
     const dataAtual = new Date();
     const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
+
+    // Log para verificar datas
+    console.log('Start Date:', startDate);
+    console.log('End Date:', endDate);
 
     let whereClause: any = {
       dt_processo: {
@@ -149,6 +156,9 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
       whereClause.ie_status = ie_status;
     }
 
+    // Log para verificar o whereClause
+    console.log('Where Clause:', whereClause);
+
     const limit = Number(itensPorPagina) || 10;
     const offset = (Number(pagina) - 1) * limit;
 
@@ -166,11 +176,13 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
         'dt_vencimento',
         'dt_processo',
         'nr_valor',
-        'ie_status'
+        'ie_status',
+        'nr_processo'
       ],
       order: [['ds_nome', 'ASC']],
       limit: limit,
-      offset: offset
+      offset: offset,
+      logging: (msg) => console.log('SQL Query:', msg) // Log da consulta SQL
     });
 
     const totalPaginas = Math.ceil(count / limit);
@@ -187,7 +199,6 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
     return res.status(500).json({ error: 'Erro interno ao listar empresas com vencimento no mês atual' });
   }
 };
-
 export const listarEmpresasPorIntervaloDatas = async (req: Request, res: Response) => {
   const { dataInicio, dataFim } = req.query;
 
@@ -213,7 +224,8 @@ export const listarEmpresasPorIntervaloDatas = async (req: Request, res: Respons
         'ds_email',
         'ie_situacao',
         'dt_processo',
-        'nr_valor'
+        'nr_valor',
+        'nr_processo'
       ],
       order: [['ds_nome', 'ASC']]
     });
@@ -236,5 +248,37 @@ export const listarEmpresasPorIntervaloDatas = async (req: Request, res: Respons
   } catch (error) {
     console.error('Erro ao listar empresas por intervalo de datas:', error);
     return res.status(500).json({ error: 'Erro interno ao listar empresas por intervalo de datas' });
+  }
+};
+
+export const updateStatus = async (req: Request, res: Response) => {
+  const { ids, ie_status } = req.body; // ids deve ser uma lista de IDs
+
+  if (!Array.isArray(ids) || ids.length === 0 || !ie_status) {
+    return res.status(400).json({ error: 'IDs e status são necessários' });
+  }
+
+  try {
+    // Atualiza o campo ie_status e dt_atualizacao para todas as empresas com os IDs fornecidos
+    const [updated] = await Empresa.update(
+      {
+        ie_status,
+        dt_atualizacao: new Date(), // Atualiza com a data e hora atuais
+      },
+      {
+        where: {
+          id: ids,
+        },
+      }
+    );
+
+    if (updated === 0) {
+      return res.status(404).json({ error: 'Nenhuma empresa encontrada com os IDs fornecidos' });
+    }
+
+    return res.status(200).json({ message: 'Status e data de atualização atualizados com sucesso' });
+  } catch (error) {
+    console.error('Erro ao atualizar o status das empresas:', error);
+    return res.status(500).json({ error: 'Erro interno ao atualizar o status das empresas' });
   }
 };

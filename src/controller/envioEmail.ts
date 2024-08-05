@@ -35,6 +35,7 @@ const enviarEmail = async (
       const dataCriacao = empresa.dt_criacao ? new Date(empresa.dt_criacao) : new Date();
       return texto
         .replace(/@nome@/g, empresa.ds_nome)
+        .replace(/@status@/g, empresa.ie_status || '')
         .replace(/@cnpj@/g, empresa.cd_cnpj)
         .replace(/@email@/g, empresa.ds_email || '')
         .replace(/@cadastro@/g, dataCriacao.toLocaleDateString())

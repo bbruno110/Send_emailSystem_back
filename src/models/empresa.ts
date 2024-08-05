@@ -16,6 +16,7 @@ interface EmpresaAttributes {
   dt_processo?: Date;
   nr_valor?: number;
   ie_status?: string;
+  nr_processo?: number;
 }
 
 interface EmpresaCreationAttributes extends Optional<EmpresaAttributes, 'id'> {}
@@ -36,6 +37,7 @@ class Empresa extends Model<EmpresaAttributes, EmpresaCreationAttributes>
   public dt_processo?: Date;
   public nr_valor?: number;
   public ie_status?: string;
+  public nr_processo?: number;
 }
 
 Empresa.init(
@@ -100,11 +102,17 @@ Empresa.init(
       type: new DataTypes.STRING(255),
       allowNull: false,
     },
+    nr_processo: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+    },
   },
   {
     tableName: 'empresa',
     modelName: 'EnvioEmail',
     schema: 'prod_email',
+    timestamps: false,
+    createdAt: false,
     sequelize,
   }
 );
