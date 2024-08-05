@@ -64,11 +64,20 @@ Empresa.init({
         type: sequelize_1.DataTypes.DECIMAL(10, 2),
         allowNull: true,
     },
+    ie_status: {
+        type: new sequelize_1.DataTypes.STRING(255),
+        allowNull: false,
+    },
+    nr_processo: {
+        type: sequelize_1.DataTypes.INTEGER,
+        allowNull: false,
+    },
 }, {
-    sequelize: conn_1.default,
-    modelName: 'Empresa',
     tableName: 'empresa',
+    modelName: 'EnvioEmail',
     schema: 'prod_email',
-    timestamps: false, // Evita a criação automática de colunas createdAt e updatedAt
+    timestamps: false,
+    createdAt: false,
+    sequelize: conn_1.default,
 });
 exports.default = Empresa;

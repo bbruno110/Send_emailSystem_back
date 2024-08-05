@@ -121,20 +121,23 @@ export const listEmpresas = async (req: Request, res: Response) => {
 export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Response) => {
   const { pagina = 1, itensPorPagina = 10, statusVencimento, ie_status, start_date, end_date } = req.query;
   
+  // Adicionando console.log para ver os parâmetros recebidos
+  console.log('Parâmetros recebidos:', {
+    pagina,
+    itensPorPagina,
+    statusVencimento,
+    ie_status,
+    start_date,
+    end_date
+  });
+
   try {
     const startDate = start_date ? new Date(start_date as string) : new Date();
     const endDate = end_date ? new Date(end_date as string) : new Date();
     const dataAtual = new Date();
     const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
 
-    // Log para verificar datas
-    console.log('Start Date:', startDate);
-    console.log('End Date:', endDate);
-
     let whereClause: any = {
-      dt_processo: {
-        [Op.between]: [startDate.toISOString(), endDate.toISOString()]
-      },
       ie_situacao: 'A'
     };
 
@@ -152,15 +155,22 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
       };
     }
 
-    if (ie_status) {
+    // Considerar dt_processo entre start_date e end_date apenas se statusVencimento for undefined ou ''
+    if (!statusVencimento || statusVencimento === '') {
+      whereClause= {
+        
+      };
+    }
+
+    if (ie_status && ie_status !== '') {
       whereClause.ie_status = ie_status;
     }
 
-    // Log para verificar o whereClause
-    console.log('Where Clause:', whereClause);
+    const limit = Math.max(1, Number(itensPorPagina) || 10);
+    const paginaAtual = Math.max(1, Number(pagina) || 1);
+    const offset = (paginaAtual - 1) * limit;
 
-    const limit = Number(itensPorPagina) || 10;
-    const offset = (Number(pagina) - 1) * limit;
+    console.log(`Page: ${paginaAtual}, Items per Page: ${limit}, Offset: ${offset}`);
 
     const { count, rows: empresas } = await Empresa.findAndCountAll({
       where: whereClause,
@@ -190,15 +200,16 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
     return res.status(200).json({
       totalItems: count,
       totalPaginas: totalPaginas,
-      paginaAtual: Number(pagina),
+      paginaAtual: paginaAtual,
       itensPorPagina: limit,
       empresas: empresas
     });
   } catch (error) {
-    console.error('Erro ao listar empresas com vencimento no mês atual:', error);
+    console.error('Erro interno ao listar empresas com vencimento no mês atual:', error);
     return res.status(500).json({ error: 'Erro interno ao listar empresas com vencimento no mês atual' });
   }
 };
+
 export const listarEmpresasPorIntervaloDatas = async (req: Request, res: Response) => {
   const { dataInicio, dataFim } = req.query;
 

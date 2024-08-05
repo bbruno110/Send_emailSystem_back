@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.enviarEmailController = void 0;
+exports.listarEnviosEmailController = exports.enviarEmailController = void 0;
 const empresa_1 = __importDefault(require("../models/empresa"));
 const perfil_1 = __importDefault(require("../models/perfil"));
 const envioEmail_1 = __importDefault(require("../models/envioEmail"));
@@ -41,6 +41,7 @@ const enviarEmail = (destinatarios, assunto, corpo, perfilId) => __awaiter(void 
             const dataCriacao = empresa.dt_criacao ? new Date(empresa.dt_criacao) : new Date();
             return texto
                 .replace(/@nome@/g, empresa.ds_nome)
+                .replace(/@status@/g, empresa.ie_status || '')
                 .replace(/@cnpj@/g, empresa.cd_cnpj)
                 .replace(/@email@/g, empresa.ds_email || '')
                 .replace(/@cadastro@/g, dataCriacao.toLocaleDateString())
@@ -119,3 +120,18 @@ const enviarEmailController = (req, res) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.enviarEmailController = enviarEmailController;
+const listarEnviosEmailController = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Opcional: Adicione filtros aqui se necessário, por exemplo, por empresa_id ou perfil_id
+        const envios = yield envioEmail_1.default.findAll({
+            // Exemplo de ordenação por data de envio, mais recente primeiro
+            order: [['dt_envio', 'DESC']],
+        });
+        res.status(200).json(envios);
+    }
+    catch (error) {
+        console.error('Erro ao listar envios de e-mail:', error);
+        res.status(500).json({ error: 'Erro interno do servidor.' });
+    }
+});
+exports.listarEnviosEmailController = listarEnviosEmailController;

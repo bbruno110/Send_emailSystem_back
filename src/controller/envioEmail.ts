@@ -38,8 +38,9 @@ const enviarEmail = async (
         .replace(/@status@/g, empresa.ie_status || '')
         .replace(/@cnpj@/g, empresa.cd_cnpj)
         .replace(/@email@/g, empresa.ds_email || '')
-        .replace(/@cadastro@/g, dataCriacao.toLocaleDateString())
+        .replace(/@dtcadastro@/g, dataCriacao.toLocaleDateString())
         .replace(/@tel1@/g, empresa.nr_telefone_1 || '')
+        .replace(/@processo@/g, empresa.nr_processo?.toString() || '')
         .replace(/@tel2@/g, empresa.nr_telefone_2 || '');
     };
 
