@@ -131,7 +131,7 @@ const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0,
         end_date
     });
     try {
-        const startDate = start_date ? new Date(start_date) : new Date();
+        const startDate = start_date ? new Date(start_date) : new Date(0); // Data mínima possível
         const endDate = end_date ? new Date(end_date) : new Date();
         const dataAtual = new Date();
         const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
@@ -153,16 +153,24 @@ const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0,
                 [sequelize_1.Op.gt]: dataAtual
             };
         }
-        // Considerar dt_processo entre start_date e end_date apenas se statusVencimento for undefined ou ''
-        if (!statusVencimento || statusVencimento === '') {
-            whereClause = {};
+        else if (statusVencimento === '') {
+            // Se statusVencimento estiver vazio, não filtrar por dt_vencimento
+            delete whereClause.dt_vencimento;
+        }
+        // Adiciona a filtragem por dt_processo apenas se statusVencimento não estiver vazio
+        if (statusVencimento) {
+            whereClause.dt_processo = {
+                [sequelize_1.Op.between]: [startDate, endDate]
+            };
         }
         if (ie_status && ie_status !== '') {
             whereClause.ie_status = ie_status;
         }
         const limit = Math.max(1, Number(itensPorPagina) || 10);
         const paginaAtual = Math.max(1, Number(pagina) || 1);
-        const offset = (paginaAtual - 1) * limit;
+        let offset = (paginaAtual - 1) * limit;
+        // Garantir que o offset não seja negativo
+        offset = Math.max(0, offset);
         console.log(`Page: ${paginaAtual}, Items per Page: ${limit}, Offset: ${offset}`);
         const { count, rows: empresas } = yield empresa_1.default.findAndCountAll({
             where: whereClause,

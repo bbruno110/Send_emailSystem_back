@@ -4,7 +4,7 @@ import sequelize from '../instance/conn';
 interface EmpresaAttributes {
   id: number;
   ds_nome: string;
-  cd_cnpj: string;
+  cd_cnpj?: string;
   nr_telefone_1?: string;
   nr_telefone_2?: string;
   ds_email?: string;
@@ -17,6 +17,7 @@ interface EmpresaAttributes {
   nr_valor?: number;
   ie_status?: string;
   nr_processo?: number;
+  nr_cpf?: string;
 }
 
 interface EmpresaCreationAttributes extends Optional<EmpresaAttributes, 'id'> {}
@@ -25,7 +26,7 @@ class Empresa extends Model<EmpresaAttributes, EmpresaCreationAttributes>
   implements EmpresaAttributes {
   public id!: number;
   public ds_nome!: string;
-  public cd_cnpj!: string;
+  public cd_cnpj?: string;
   public nr_telefone_1?: string;
   public nr_telefone_2?: string;
   public ds_email?: string;
@@ -36,8 +37,16 @@ class Empresa extends Model<EmpresaAttributes, EmpresaCreationAttributes>
   public dt_vencimento?: Date;
   public dt_processo?: Date;
   public nr_valor?: number;
-  public ie_status?: string;
-  public nr_processo?: number;
+  public ie_status!: string;
+  public nr_processo!: number;
+  public nr_cpf?: string;
+
+  // Método de validação público e estático
+  public static validateCpfOrCnpj(instance: Empresa) {
+    if (!instance.nr_cpf && !instance.cd_cnpj) {
+      throw new Error('Pelo menos um dos campos "CPF" ou "CNPJ" deve ser preenchido.');
+    }
+  }
 }
 
 Empresa.init(
@@ -53,7 +62,7 @@ Empresa.init(
     },
     cd_cnpj: {
       type: new DataTypes.STRING(18),
-      allowNull: false,
+      allowNull: true,
     },
     nr_telefone_1: {
       type: new DataTypes.STRING(20),
@@ -106,14 +115,23 @@ Empresa.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    nr_cpf: {
+      type: new DataTypes.STRING(11),
+      allowNull: true,
+    },
   },
   {
     tableName: 'empresa',
-    modelName: 'EnvioEmail',
+    modelName: 'Empresa',
     schema: 'prod_email',
     timestamps: false,
     createdAt: false,
     sequelize,
+    hooks: {
+      beforeSave: async (instance: Empresa) => {
+        Empresa.validateCpfOrCnpj(instance); // Chamada ao método estático
+      },
+    },
   }
 );
 

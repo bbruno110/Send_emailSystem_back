@@ -36,7 +36,8 @@ const enviarEmail = async (
       return texto
         .replace(/@nome@/g, empresa.ds_nome)
         .replace(/@status@/g, empresa.ie_status || '')
-        .replace(/@cnpj@/g, empresa.cd_cnpj)
+        .replace(/@cnpj@/g, empresa.cd_cnpj || '')
+        .replace(/@cpf@/g, empresa.nr_cpf || '')
         .replace(/@email@/g, empresa.ds_email || '')
         .replace(/@dtcadastro@/g, dataCriacao.toLocaleDateString())
         .replace(/@tel1@/g, empresa.nr_telefone_1 || '')

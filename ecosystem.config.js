@@ -10,8 +10,8 @@ module.exports = {
           PG_PASSWORD: "123Mudar",
           PG_HOST: "localhost",
           PG_PORT: "5433",
-          user_pass: "tfzh cchp mgfx rfdr",
-          user_mail: "bruno.os230@gmail.com"
+          user_pass: "ukeq fosv nvfp pmgn",
+          user_mail: "programausinamarcasepatentes@gmail.com"
         },
         env_production: {
           NODE_ENV: "production",
@@ -20,8 +20,8 @@ module.exports = {
           PG_PASSWORD: "123Mudar",
           PG_HOST: "localhost",
           PG_PORT: "5433",
-          user_pass: "tfzh cchp mgfx rfdr",
-          user_mail: "bruno.os230@gmail.com"
+          user_pass: "ukeq fosv nvfp pmgn",
+          user_mail: "programausinamarcasepatentes@gmail.com"
         }
       }
     ]
