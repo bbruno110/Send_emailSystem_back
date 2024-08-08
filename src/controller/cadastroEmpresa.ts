@@ -79,7 +79,20 @@ export const cadastrarEmpresa = async (req: Request, res: Response) => {
 
 export const editEmpresa = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { ds_nome, cd_cnpj, nr_telefone_1, nr_telefone_2, ds_email, nr_repeticao, ie_situacao, nr_valor, dt_processo, ie_status, nr_processo, nr_cpf } = req.body;
+  const {
+    ds_nome,
+    cd_cnpj,
+    nr_cpf,
+    nr_telefone_1,
+    nr_telefone_2,
+    ds_email,
+    nr_repeticao,
+    ie_situacao,
+    nr_valor,
+    dt_processo,
+    ie_status,
+    nr_processo
+  } = req.body;
 
   try {
     const empresa = await Empresa.findByPk(id);
@@ -88,19 +101,48 @@ export const editEmpresa = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Empresa não encontrada' });
     }
 
+    // Validação para garantir que não exista CPF e CNPJ ao mesmo tempo
+    if ((nr_cpf && empresa.cd_cnpj) || (cd_cnpj && empresa.nr_cpf)) {
+      return res.status(400).json({ error: 'Não é permitido fornecer tanto CPF quanto CNPJ ao mesmo tempo' });
+    }
+
+    // Validação de dados duplicados
+    const existingEmail = await Empresa.findOne({
+      where: { ds_email, id: { [Op.ne]: id } }
+    });
+    if (existingEmail) {
+      return res.status(400).json({ error: 'Email já está cadastrado' });
+    }
+
+    const existingCpf = nr_cpf ? await Empresa.findOne({
+      where: { nr_cpf, id: { [Op.ne]: id } }
+    }) : null;
+
+    if (existingCpf) {
+      return res.status(400).json({ error: 'CPF já está cadastrado' });
+    }
+
+    const existingCnpj = cd_cnpj ? await Empresa.findOne({
+      where: { cd_cnpj, id: { [Op.ne]: id } }
+    }) : null;
+
+    if (existingCnpj) {
+      return res.status(400).json({ error: 'CNPJ já está cadastrado' });
+    }
+    console.log('tel2: ', nr_telefone_2)
+    // Atualização dos campos
     empresa.ds_nome = ds_nome || empresa.ds_nome;
     empresa.cd_cnpj = cd_cnpj || empresa.cd_cnpj;
+    empresa.nr_cpf = nr_cpf || empresa.nr_cpf;
     empresa.nr_telefone_1 = nr_telefone_1 || empresa.nr_telefone_1;
-    empresa.nr_telefone_2 = nr_telefone_2 || empresa.nr_telefone_2;
+    empresa.nr_telefone_2 = nr_telefone_2;
     empresa.ds_email = ds_email || empresa.ds_email;
     empresa.nr_repeticao = nr_repeticao || empresa.nr_repeticao;
     empresa.ie_situacao = ie_situacao || empresa.ie_situacao;
     empresa.nr_valor = nr_valor || empresa.nr_valor;
     empresa.dt_processo = dt_processo ? new Date(dt_processo) : empresa.dt_processo;
     empresa.nr_processo = nr_processo || empresa.nr_processo;
-    empresa.nr_cpf = nr_cpf || empresa.nr_cpf;
-
-    empresa.ie_status = ie_status || empresa.ie_status; // Usando o valor existente se ie_status não for fornecido
+    empresa.ie_status = ie_status || empresa.ie_status;
 
     await empresa.save();
 
@@ -110,6 +152,7 @@ export const editEmpresa = async (req: Request, res: Response) => {
     return res.status(500).json({ error: 'Erro interno ao editar a empresa' });
   }
 };
+
 
 export const listEmpresas = async (req: Request, res: Response) => {
   try {
