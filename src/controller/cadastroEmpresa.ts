@@ -129,8 +129,6 @@ export const editEmpresa = async (req: Request, res: Response) => {
     if (existingCnpj) {
       return res.status(400).json({ error: 'CNPJ já está cadastrado' });
     }
-    console.log('tel2: ', nr_telefone_2)
-    // Atualização dos campos
     empresa.ds_nome = ds_nome || empresa.ds_nome;
     empresa.cd_cnpj = cd_cnpj || empresa.cd_cnpj;
     empresa.nr_cpf = nr_cpf || empresa.nr_cpf;
