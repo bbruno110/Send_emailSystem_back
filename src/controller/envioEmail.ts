@@ -4,9 +4,8 @@ import Perfil from '../models/perfil';
 import EnvioEmail, { EnvioEmailCreationAttributes } from '../models/envioEmail';
 import nodemailer from 'nodemailer';
 
-// Crie um transporte do Nodemailer com as configurações do seu servidor de e-mail
 const transporter = nodemailer.createTransport({
-  service: 'gmail', // Exemplo com Gmail, ajuste conforme seu provedor
+  service: 'gmail',
   secure: true,
   auth: {
     user: process.env.user_mail,
@@ -129,9 +128,9 @@ export const enviarEmailController = async (req: Request, res: Response) => {
 
 export const listarEnviosEmailController = async (req: Request, res: Response) => {
   try {
-    // Opcional: Adicione filtros aqui se necessário, por exemplo, por empresa_id ou perfil_id
+    
     const envios = await EnvioEmail.findAll({
-      // Exemplo de ordenação por data de envio, mais recente primeiro
+
       order: [['dt_envio', 'DESC']],
     });
     
