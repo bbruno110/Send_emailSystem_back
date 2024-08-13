@@ -2,7 +2,7 @@ module.exports = {
     apps: [
       {
         name: "app",
-        script: "dist/app.js", // substitua pelo caminho correto do seu arquivo principal
+        script: "dist/app.js",
         env: {
           NODE_ENV: "development",
           PG_DB: "sys_emails_env",
@@ -10,7 +10,7 @@ module.exports = {
           PG_PASSWORD: "123Mudar",
           PG_HOST: "localhost",
           PG_PORT: "5433",
-          user_pass: "ukeq fosv nvfp pmgn",
+          user_pass: "cmoq tevw xrnf epcq",
           user_mail: "programausinamarcasepatentes@gmail.com"
         },
         env_production: {
@@ -20,7 +20,7 @@ module.exports = {
           PG_PASSWORD: "123Mudar",
           PG_HOST: "localhost",
           PG_PORT: "5433",
-          user_pass: "ukeq fosv nvfp pmgn",
+          user_pass: "cmoq tevw xrnf epcq",
           user_mail: "programausinamarcasepatentes@gmail.com"
         }
       }

@@ -5,6 +5,7 @@ import cors from 'cors';
 
 import dotenv from 'dotenv';
 import routes from './router';
+import { getCurrentDateTimeInTimeZone } from './controller/envioEmail';
 
 dotenv.config();
 

@@ -21,25 +21,25 @@ const adicionarMeses = (data, meses) => {
     novaData.setMonth(novaData.getMonth() + meses);
     return novaData;
 };
-// Função para tratar os dados da empresa
 function tratarDadosEmpresa(dados) {
-    if (!dados.nome || !dados.cnpj || !dados.tel1 || !dados.email || !dados.nr_processo) {
+    if (!dados.nome || !dados.documento || !dados.tel1 || !dados.email || !dados.nr_processo) {
         throw new Error('Dados incompletos para cadastrar empresa');
     }
-    const cnpj = dados.cnpj.replace(/[^\d]/g, '');
+    const cnpj = dados.tipoDocumento === 'CNPJ' ? dados.documento.replace(/[^\d]/g, '') : null;
+    const cpf = dados.tipoDocumento === 'CPF' ? dados.documento.replace(/[^\d]/g, '') : null;
     const tel1 = dados.tel1.replace(/[^\d]/g, '');
     const tel2 = dados.tel2 ? dados.tel2.replace(/[^\d]/g, '') : '';
     const situacao = dados.situacao || 'A';
-    const valor = dados.nr_valor ? parseFloat(dados.nr_valor) : null; // Processa nr_valor
-    const processo = dados.dt_processo ? new Date(dados.dt_processo) : null; // Processa dt_processo
-    const repeticao = dados.repeticao || 0; // Repetição, em meses
-    const nrProcesso = dados.nr_processo; // Novo campo
-    const dataCriacao = new Date(); // Data de criação, pode ser o momento atual ou outra data fornecida
-    // Calcula a dt_vencimento
+    const valor = dados.nr_valor ? parseFloat(dados.nr_valor) : null;
+    const processo = dados.dt_processo ? new Date(dados.dt_processo) : null;
+    const repeticao = dados.repeticao || 0;
+    const nrProcesso = dados.nr_processo;
+    const dataCriacao = new Date();
     const dtVencimento = adicionarMeses(dataCriacao, repeticao);
     return {
         ds_nome: dados.nome,
         cd_cnpj: cnpj,
+        nr_cpf: cpf,
         nr_telefone_1: tel1,
         nr_telefone_2: tel2,
         ds_email: dados.email,
@@ -51,18 +51,28 @@ function tratarDadosEmpresa(dados) {
         dt_processo: processo,
         dt_vencimento: dtVencimento,
         ie_status: 'Inicial',
-        nr_processo: nrProcesso, // Novo campo
+        nr_processo: nrProcesso,
     };
 }
-// Função para cadastrar empresa
 const cadastrarEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const dadosTratados = tratarDadosEmpresa(req.body);
         const empresaExistente = yield empresa_1.default.findOne({
-            where: { cd_cnpj: dadosTratados.cd_cnpj }
+            where: {
+                [sequelize_1.Op.or]: [
+                    {
+                        cd_cnpj: dadosTratados.cd_cnpj || { [sequelize_1.Op.is]: null },
+                        nr_cpf: dadosTratados.cd_cnpj ? { [sequelize_1.Op.is]: null } : dadosTratados.nr_cpf
+                    },
+                    {
+                        nr_cpf: dadosTratados.nr_cpf || { [sequelize_1.Op.is]: null },
+                        cd_cnpj: dadosTratados.nr_cpf ? { [sequelize_1.Op.is]: null } : dadosTratados.cd_cnpj
+                    }
+                ]
+            }
         });
         if (empresaExistente) {
-            res.status(400).json({ erro: 'CNPJ já cadastrado' });
+            res.status(226).json({ erro: 'CNPJ ou CPF já cadastrado' });
             return;
         }
         const novaEmpresa = yield empresa_1.default.create(dadosTratados);
@@ -76,24 +86,47 @@ const cadastrarEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, functio
 exports.cadastrarEmpresa = cadastrarEmpresa;
 const editEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { id } = req.params;
-    const { ds_nome, cd_cnpj, nr_telefone_1, nr_telefone_2, ds_email, nr_repeticao, ie_situacao, nr_valor, dt_processo, ie_status, nr_processo } = req.body;
+    const { ds_nome, cd_cnpj, nr_cpf, nr_telefone_1, nr_telefone_2, ds_email, nr_repeticao, ie_situacao, nr_valor, dt_processo, ie_status, nr_processo } = req.body;
     try {
         const empresa = yield empresa_1.default.findByPk(id);
         if (!empresa) {
             return res.status(404).json({ error: 'Empresa não encontrada' });
         }
-        empresa.ds_nome = ds_nome;
-        empresa.cd_cnpj = cd_cnpj;
-        empresa.nr_telefone_1 = nr_telefone_1;
+        // Validação para garantir que não exista CPF e CNPJ ao mesmo tempo
+        if ((nr_cpf && empresa.cd_cnpj) || (cd_cnpj && empresa.nr_cpf)) {
+            return res.status(400).json({ error: 'Não é permitido fornecer tanto CPF quanto CNPJ ao mesmo tempo' });
+        }
+        // Validação de dados duplicados
+        const existingEmail = yield empresa_1.default.findOne({
+            where: { ds_email, id: { [sequelize_1.Op.ne]: id } }
+        });
+        if (existingEmail) {
+            return res.status(400).json({ error: 'Email já está cadastrado' });
+        }
+        const existingCpf = nr_cpf ? yield empresa_1.default.findOne({
+            where: { nr_cpf, id: { [sequelize_1.Op.ne]: id } }
+        }) : null;
+        if (existingCpf) {
+            return res.status(400).json({ error: 'CPF já está cadastrado' });
+        }
+        const existingCnpj = cd_cnpj ? yield empresa_1.default.findOne({
+            where: { cd_cnpj, id: { [sequelize_1.Op.ne]: id } }
+        }) : null;
+        if (existingCnpj) {
+            return res.status(400).json({ error: 'CNPJ já está cadastrado' });
+        }
+        empresa.ds_nome = ds_nome || empresa.ds_nome;
+        empresa.cd_cnpj = cd_cnpj || empresa.cd_cnpj;
+        empresa.nr_cpf = nr_cpf || empresa.nr_cpf;
+        empresa.nr_telefone_1 = nr_telefone_1 || empresa.nr_telefone_1;
         empresa.nr_telefone_2 = nr_telefone_2;
-        empresa.ds_email = ds_email;
-        empresa.nr_repeticao = nr_repeticao;
-        empresa.ie_situacao = ie_situacao;
-        empresa.nr_valor = nr_valor;
-        empresa.dt_processo = dt_processo;
-        empresa.nr_processo = nr_processo;
-        // Verifica se ie_status foi enviado e é válido, caso contrário define um valor padrão
-        empresa.ie_status = ie_status || empresa.ie_status; // Usando o valor existente se ie_status não for fornecido
+        empresa.ds_email = ds_email || empresa.ds_email;
+        empresa.nr_repeticao = nr_repeticao || empresa.nr_repeticao;
+        empresa.ie_situacao = ie_situacao || empresa.ie_situacao;
+        empresa.nr_valor = nr_valor || empresa.nr_valor;
+        empresa.dt_processo = dt_processo ? new Date(dt_processo) : empresa.dt_processo;
+        empresa.nr_processo = nr_processo || empresa.nr_processo;
+        empresa.ie_status = ie_status || empresa.ie_status;
         yield empresa.save();
         return res.status(200).json(empresa);
     }
@@ -105,12 +138,10 @@ const editEmpresa = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
 exports.editEmpresa = editEmpresa;
 const listEmpresas = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Busca todas as empresas no banco de dados
         const empresas = yield empresa_1.default.findAll({
-            attributes: ['id', 'ds_nome', 'ds_email', 'cd_cnpj', 'nr_telefone_1', 'nr_telefone_2', 'nr_repeticao', 'ie_situacao', 'dt_processo', 'nr_valor', 'nr_processo'],
+            attributes: ['id', 'ds_nome', 'ds_email', 'cd_cnpj', 'nr_telefone_1', 'nr_telefone_2', 'nr_repeticao', 'ie_situacao', 'dt_processo', 'nr_valor', 'nr_processo', 'nr_cpf'],
             order: [['ds_nome', 'ASC']]
         });
-        // Retorna a lista de empresas como resposta
         return res.status(200).json(empresas);
     }
     catch (error) {
@@ -121,7 +152,6 @@ const listEmpresas = (req, res) => __awaiter(void 0, void 0, void 0, function* (
 exports.listEmpresas = listEmpresas;
 const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { pagina = 1, itensPorPagina = 10, statusVencimento, ie_status, start_date, end_date } = req.query;
-    // Adicionando console.log para ver os parâmetros recebidos
     console.log('Parâmetros recebidos:', {
         pagina,
         itensPorPagina,
@@ -154,10 +184,8 @@ const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0,
             };
         }
         else if (statusVencimento === '') {
-            // Se statusVencimento estiver vazio, não filtrar por dt_vencimento
             delete whereClause.dt_vencimento;
         }
-        // Adiciona a filtragem por dt_processo apenas se statusVencimento não estiver vazio
         if (statusVencimento) {
             whereClause.dt_processo = {
                 [sequelize_1.Op.between]: [startDate, endDate]
@@ -168,9 +196,7 @@ const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0,
         }
         const limit = Math.max(1, Number(itensPorPagina) || 10);
         const paginaAtual = Math.max(1, Number(pagina) || 1);
-        let offset = (paginaAtual - 1) * limit;
-        // Garantir que o offset não seja negativo
-        offset = Math.max(0, offset);
+        const offset = Math.max(0, (paginaAtual - 1) * limit);
         console.log(`Page: ${paginaAtual}, Items per Page: ${limit}, Offset: ${offset}`);
         const { count, rows: empresas } = yield empresa_1.default.findAndCountAll({
             where: whereClause,
@@ -187,12 +213,13 @@ const listarEmpresasVencimentoMesAtual = (req, res) => __awaiter(void 0, void 0,
                 'dt_processo',
                 'nr_valor',
                 'ie_status',
-                'nr_processo'
+                'nr_processo',
+                'nr_cpf'
             ],
-            order: [['ds_nome', 'ASC']],
+            order: [['dt_vencimento', 'ASC'], ['ds_nome', 'ASC']],
             limit: limit,
             offset: offset,
-            logging: (msg) => console.log('SQL Query:', msg) // Log da consulta SQL
+            logging: (msg) => console.log('SQL Query:', msg)
         });
         const totalPaginas = Math.ceil(count / limit);
         return res.status(200).json({
@@ -215,13 +242,12 @@ const listarEmpresasPorIntervaloDatas = (req, res) => __awaiter(void 0, void 0, 
         return res.status(400).json({ error: 'Data de início e data de fim são necessárias' });
     }
     try {
-        // Busca todas as empresas dentro do intervalo de datas, sem o campo nr_repeticao
         const empresas = yield empresa_1.default.findAll({
             where: {
                 dt_processo: {
                     [sequelize_1.Op.between]: [new Date(dataInicio), new Date(dataFim)],
                 },
-                ie_situacao: 'A' // Filtra apenas as empresas ativas
+                ie_situacao: 'A'
             },
             attributes: [
                 'id',
@@ -233,20 +259,19 @@ const listarEmpresasPorIntervaloDatas = (req, res) => __awaiter(void 0, void 0, 
                 'ie_situacao',
                 'dt_processo',
                 'nr_valor',
-                'nr_processo'
+                'nr_processo',
+                'nr_cpf'
             ],
             order: [['ds_nome', 'ASC']]
         });
-        // Calcula o total de nr_valor
         const totalValorResult = yield empresa_1.default.sum('nr_valor', {
             where: {
                 dt_processo: {
                     [sequelize_1.Op.between]: [new Date(dataInicio), new Date(dataFim)],
                 },
-                ie_situacao: 'A' // Filtra apenas as empresas ativas
+                ie_situacao: 'A'
             }
         });
-        // Retorna a lista de empresas e o total de nr_valor
         return res.status(200).json({
             total: totalValorResult,
             empresas
@@ -259,15 +284,14 @@ const listarEmpresasPorIntervaloDatas = (req, res) => __awaiter(void 0, void 0, 
 });
 exports.listarEmpresasPorIntervaloDatas = listarEmpresasPorIntervaloDatas;
 const updateStatus = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    const { ids, ie_status } = req.body; // ids deve ser uma lista de IDs
+    const { ids, ie_status } = req.body;
     if (!Array.isArray(ids) || ids.length === 0 || !ie_status) {
         return res.status(400).json({ error: 'IDs e status são necessários' });
     }
     try {
-        // Atualiza o campo ie_status e dt_atualizacao para todas as empresas com os IDs fornecidos
         const [updated] = yield empresa_1.default.update({
             ie_status,
-            dt_atualizacao: new Date(), // Atualiza com a data e hora atuais
+            dt_atualizacao: new Date(),
         }, {
             where: {
                 id: ids,

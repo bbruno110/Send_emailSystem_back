@@ -1,4 +1,13 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,6 +15,12 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const sequelize_1 = require("sequelize");
 const conn_1 = __importDefault(require("../instance/conn"));
 class Empresa extends sequelize_1.Model {
+    // Método de validação público e estático
+    static validateCpfOrCnpj(instance) {
+        if (!instance.nr_cpf && !instance.cd_cnpj) {
+            throw new Error('Pelo menos um dos campos "CPF" ou "CNPJ" deve ser preenchido.');
+        }
+    }
 }
 Empresa.init({
     id: {
@@ -19,7 +34,7 @@ Empresa.init({
     },
     cd_cnpj: {
         type: new sequelize_1.DataTypes.STRING(18),
-        allowNull: false,
+        allowNull: true,
     },
     nr_telefone_1: {
         type: new sequelize_1.DataTypes.STRING(20),
@@ -72,12 +87,21 @@ Empresa.init({
         type: sequelize_1.DataTypes.INTEGER,
         allowNull: false,
     },
+    nr_cpf: {
+        type: new sequelize_1.DataTypes.STRING(11),
+        allowNull: true,
+    },
 }, {
     tableName: 'empresa',
-    modelName: 'EnvioEmail',
+    modelName: 'Empresa',
     schema: 'prod_email',
     timestamps: false,
     createdAt: false,
     sequelize: conn_1.default,
+    hooks: {
+        beforeSave: (instance) => __awaiter(void 0, void 0, void 0, function* () {
+            Empresa.validateCpfOrCnpj(instance); // Chamada ao método estático
+        }),
+    },
 });
 exports.default = Empresa;
