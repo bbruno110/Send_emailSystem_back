@@ -19,4 +19,6 @@ routes.put('/update-perfil/:id', Perfil.updatePerfil);
 routes.post('/sendmail', Email.enviarEmailController);
 routes.get('/send-list', Email.listarEnviosEmailController)
 
+routes.delete('/delete/:id', Empresa.deletarEmpresa);
+
 export default routes;

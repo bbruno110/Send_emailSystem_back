@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import Empresa from '../models/empresa';
 import Perfil from '../models/perfil';
 import EnvioEmail, { EnvioEmailCreationAttributes } from '../models/envioEmail';
@@ -7,7 +7,7 @@ import path from 'path';
 import { toZonedTime, format as formatZonedTime } from 'date-fns-tz';
 import sequelize from '../instance/conn';
 
-const logoPath = path.join(__dirname, '..', 'assets', 'Logo.png');
+const logoPath = path.join('assets', 'Logo.png');
 const timeZone = 'America/Sao_Paulo';
 
 export const getCurrentDateTimeInTimeZone = () => {
@@ -118,7 +118,17 @@ const enviarEmail = async (
           from: `"Usina Marcas e Patentes" <${process.env.user_mail}>`,
           to: empresa.ds_email,
           subject: assunto,
-          html: `${corpoFinal}<br><br><strong>Data de envio:</strong> ${dataEnvioFormatada}<br><br><img src="cid:logo" width="40" height="40"/>`,
+          html: `
+    ${corpoFinal}<br><br>
+    <img src="cid:logo" width="165" height="165"/><br><br>
+    <strong>ALESSANDRE ACHY</strong><br>
+    71 99267-0000<br><br>
+    usinamarcasepatentes@gmail.com<br><br>
+    Rua Hormindo Barros, n° 760, Sala 10<br>
+    Paseo Candeias, Bairro Candeias<br>
+    CEP: 45.029-094<br>
+    Vitória da Conquista - Bahia
+  `,
           attachments: [
             {
               filename: 'Logo.png',
@@ -159,26 +169,48 @@ export const enviarEmailController = async (req: Request, res: Response) => {
       where: {
         id: destinatarios,
       },
-      attributes: ['id', 'ds_email']
+      attributes: ['id', 'ds_email', 'dt_vencimento', 'nr_repeticao'],
     });
 
     // 2. Extraia os IDs e e-mails das empresas encontradas
     const listaEmails = empresas.map((empresa) => ({
       id: empresa.id.toString(),
       email: empresa.ds_email,
+      dt_vencimento: empresa.dt_vencimento,
+      nr_repeticao: empresa.nr_repeticao,
     }));
 
     if (listaEmails.length === 0) {
       return res.status(404).json({ error: 'Nenhuma empresa encontrada para os IDs fornecidos.' });
     }
 
-    // 3. Envie os e-mails usando o serviço de e-mail, passando apenas os e-mails correspondentes aos IDs
+    // 3. Envie os e-mails usando o serviço de e-mail
     const emails = listaEmails.map(item => item.email).filter((email): email is string => Boolean(email));
     const ids = listaEmails.map(item => item.id);
 
     await enviarEmail(ids, assunto, corpo, perfilId);
 
-    res.status(200).json({ message: 'E-mails enviados com sucesso.' });
+    // 4. Atualizar a data de vencimento
+    const empresasAtualizadas = await Promise.all(
+      listaEmails.map(async (empresa) => {
+        if (empresa.dt_vencimento && empresa.nr_repeticao) {
+          const novaDataVencimento = new Date(empresa.dt_vencimento);
+          novaDataVencimento.setMonth(novaDataVencimento.getMonth() + empresa.nr_repeticao);
+
+          // Atualizar a empresa com a nova data de vencimento
+          await Empresa.update(
+            { dt_vencimento: novaDataVencimento },
+            { where: { id: empresa.id } }
+          );
+        }
+        return empresa.id;
+      })
+    );
+
+    res.status(200).json({
+      message: 'E-mails enviados com sucesso e datas de vencimento atualizadas.',
+      empresasAtualizadas,
+    });
   } catch (error) {
     console.error('Erro ao enviar e-mails:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });

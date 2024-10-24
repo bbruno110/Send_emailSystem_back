@@ -10,7 +10,7 @@ const adicionarMeses = (data: Date, meses: number): Date => {
 };
 
 function tratarDadosEmpresa(dados: any): any {
-  if (!dados.nome || !dados.documento || !dados.tel1 || !dados.email || !dados.nr_processo) {
+  if (!dados.nome || !dados.documento || !dados.tel1 || !dados.email) {
     throw new Error('Dados incompletos para cadastrar empresa');
   }
 
@@ -64,10 +64,10 @@ export const cadastrarEmpresa = async (req: Request, res: Response) => {
       }
     });
 
-    if (empresaExistente) {
+    /*if (empresaExistente) {
       res.status(226).json({ erro: 'CNPJ ou CPF já cadastrado' });
       return;
-    }
+    }*/
 
     const novaEmpresa = await Empresa.create(dadosTratados);
     res.status(200).json(novaEmpresa);
@@ -106,19 +106,11 @@ export const editEmpresa = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Não é permitido fornecer tanto CPF quanto CNPJ ao mesmo tempo' });
     }
 
-    // Validação de dados duplicados
-    const existingEmail = await Empresa.findOne({
-      where: { ds_email, id: { [Op.ne]: id } }
-    });
-    if (existingEmail) {
-      return res.status(400).json({ error: 'Email já está cadastrado' });
-    }
-
     const existingCpf = nr_cpf ? await Empresa.findOne({
       where: { nr_cpf, id: { [Op.ne]: id } }
     }) : null;
 
-    if (existingCpf) {
+    /*if (existingCpf) {
       return res.status(400).json({ error: 'CPF já está cadastrado' });
     }
 
@@ -129,6 +121,7 @@ export const editEmpresa = async (req: Request, res: Response) => {
     if (existingCnpj) {
       return res.status(400).json({ error: 'CNPJ já está cadastrado' });
     }
+    */
     empresa.ds_nome = ds_nome || empresa.ds_nome;
     empresa.cd_cnpj = cd_cnpj || empresa.cd_cnpj;
     empresa.nr_cpf = nr_cpf || empresa.nr_cpf;
@@ -175,7 +168,7 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
     statusVencimento,
     ie_status,
     start_date,
-    end_date
+    end_date,
   });
 
   try {
@@ -185,38 +178,48 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
     const ultimoDiaMes = new Date(dataAtual.getFullYear(), dataAtual.getMonth() + 1, 0);
 
     let whereClause: any = {
-      ie_situacao: 'A'
+      ie_situacao: 'A', // Filtro para situação ativa
+      nr_repeticao: { [Op.gt]: 0 }, // Filtro para exibir apenas empresas com nr_repeticao > 0
     };
 
-    if (statusVencimento === 'vencidas') {
-      whereClause.dt_vencimento = {
-        [Op.lt]: dataAtual
-      };
-    } else if (statusVencimento === 'proximas') {
-      whereClause.dt_vencimento = {
-        [Op.between]: [dataAtual, ultimoDiaMes]
-      };
-    } else if (statusVencimento === 'naoVencidas') {
-      whereClause.dt_vencimento = {
-        [Op.gt]: dataAtual
-      };
-    } else if (statusVencimento === '') {
-      delete whereClause.dt_vencimento;
-    }
-
-    if (statusVencimento) {
+    // Filtro baseado em 'statusVencimento' E sempre considerando o intervalo de 'start_date' e 'end_date'
+    if (statusVencimento && statusVencimento !== '') {
+      // Caso 'statusVencimento' esteja definido
+      if (statusVencimento === 'vencidas') {
+        whereClause.dt_vencimento = {
+          [Op.lt]: dataAtual,
+          [Op.between]: [startDate, endDate], // Filtra entre o intervalo fornecido
+        };
+      } else if (statusVencimento === 'proximas') {
+        // Considera o intervalo entre data atual e o último dia do mês, e também entre start_date e end_date
+        whereClause.dt_vencimento = {
+          [Op.between]: [
+            dataAtual > startDate ? dataAtual : startDate, // Pega a maior data entre 'dataAtual' e 'startDate'
+            ultimoDiaMes < endDate ? ultimoDiaMes : endDate // Pega a menor data entre 'ultimoDiaMes' e 'endDate'
+          ]
+        };
+      
+      } else if (statusVencimento === 'naoVencidas') {
+        whereClause.dt_vencimento = {
+          [Op.gt]: dataAtual,
+          [Op.between]: [startDate, endDate], // Filtra entre o intervalo fornecido
+        };
+      }
+    } else {
+      // Caso 'statusVencimento' seja nulo/indefinido ou vazio, filtrar com base em 'dt_processo'
       whereClause.dt_processo = {
-        [Op.between]: [startDate, endDate]
+        [Op.gte]: startDate, // Filtra pelo intervalo de 'dt_processo'
       };
     }
 
+    // Filtro adicional para 'ie_status', se fornecido
     if (ie_status && ie_status !== '') {
       whereClause.ie_status = ie_status;
     }
 
-    const limit = Math.max(1, Number(itensPorPagina) || 10);
-    const paginaAtual = Math.max(1, Number(pagina) || 1);
-    const offset = Math.max(0, (paginaAtual - 1) * limit);
+    const limit = Math.max(1, Number(itensPorPagina) || 10); // Número de itens por página
+    const paginaAtual = Math.max(1, Number(pagina) || 1); // Página atual
+    const offset = Math.max(0, (paginaAtual - 1) * limit); // Cálculo do deslocamento
 
     console.log(`Page: ${paginaAtual}, Items per Page: ${limit}, Offset: ${offset}`);
 
@@ -236,12 +239,12 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
         'nr_valor',
         'ie_status',
         'nr_processo',
-        'nr_cpf'
+        'nr_cpf',
       ],
-      order: [['dt_vencimento', 'ASC'],['ds_nome', 'ASC']],
+      order: [['dt_vencimento', 'ASC'], ['ds_nome', 'ASC']],
       limit: limit,
       offset: offset,
-      logging: (msg) => console.log('SQL Query:', msg)
+      logging: (msg) => console.log('SQL Query:', msg),
     });
 
     const totalPaginas = Math.ceil(count / limit);
@@ -251,7 +254,7 @@ export const listarEmpresasVencimentoMesAtual = async (req: Request, res: Respon
       totalPaginas: totalPaginas,
       paginaAtual: paginaAtual,
       itensPorPagina: limit,
-      empresas: empresas
+      empresas: empresas,
     });
   } catch (error) {
     console.error('Erro interno ao listar empresas com vencimento no mês atual:', error);
@@ -337,5 +340,28 @@ export const updateStatus = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Erro ao atualizar o status das empresas:', error);
     return res.status(500).json({ error: 'Erro interno ao atualizar o status das empresas' });
+  }
+};
+
+export const deletarEmpresa = async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  try {
+    // Tenta encontrar a empresa pelo ID
+    const empresa = await Empresa.findByPk(id);
+
+    // Verifica se a empresa foi encontrada
+    if (!empresa) {
+      return res.status(404).json({ error: 'Empresa não encontrada' });
+    }
+
+    // Exclui a empresa encontrada
+    await empresa.destroy();
+
+    // Retorna uma resposta de sucesso
+    return res.status(200).json({ message: 'Empresa deletada com sucesso' });
+  } catch (error) {
+    console.error('Erro ao deletar a empresa:', error);
+    return res.status(500).json({ error: 'Erro interno ao deletar a empresa' });
   }
 };
